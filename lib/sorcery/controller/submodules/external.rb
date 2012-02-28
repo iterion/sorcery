@@ -40,15 +40,23 @@ module Sorcery
             end
           end
           
-          # tries to login the user from provider's callback
+          # links provider to account if user is logged in
+          # otherwise it tries to login the user from provider's callback
           def login_from(provider)
             @provider = Config.send(provider)
             @provider.process_callback(params,session)
             @user_hash = @provider.get_user_hash
-            if user = user_class.load_from_provider(provider,@user_hash[:uid].to_s)
-              reset_session
-              auto_login(user)
-              user
+            if logged_in?
+              if current_user.link_from_provider(provider, @user_hash[:uid])
+                session[:"#{provider}_access_token"] = @user_hash[:access_token]
+                current_user
+              end
+            else
+              if user = user_class.load_from_provider(provider,@user_hash[:uid].to_s)
+                reset_session
+                auto_login(user)
+                user
+              end
             end
           end
 
